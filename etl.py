@@ -31,8 +31,9 @@ def create_spark_session():
        .getOrCreate()
     return spark
 
-
+""" load  song data from s3 and  load data in songs_table,artists_table"""
 def process_song_data(spark, input_data, output_data):
+
     # get filepath to song data file
     song_data = os.path.join(input_data, 'song_data/*/*/*/*.json')
 
@@ -58,10 +59,10 @@ def process_song_data(spark, input_data, output_data):
     # write artists table to parquet files
     artists_table.write.mode('append').parquet(output_data+"/artists_table")
 
-
+""" load  log data and song data from s3 and  load data in  users_table,taim_table,songplays_table"""
 def process_log_data(spark, input_data, output_data):
     # get filepath to log data file
-    log_data = os.path.join(input_data,'='log-data/*/*/*.json')
+    log_data = os.path.join(input_data,'log-data/*/*/*.json')
 
     # read log data file
     df = spark.read.json(log_data)
