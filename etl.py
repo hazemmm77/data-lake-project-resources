@@ -72,7 +72,7 @@ def process_log_data(spark, input_data, output_data):
 
     # extract columns for users table
     users_table=df.selectExpr('userId as user_id','firstName as first_name','lastName as last_name','gender','level')
-    users_table = users_table.drop_duplicates(subset=['userId'])
+    users_table = users_table.drop_duplicates(subset=['user_id'])
 
     # write users table to parquet files
     users_table.write.mode('append').parquet(output_data+"/users_table.parquet")
