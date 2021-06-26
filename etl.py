@@ -4,6 +4,9 @@ import os
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import udf, col
 from pyspark.sql.functions import year, month, dayofmonth, hour, weekofyear, date_format
+import findspark
+
+
 
 
 config = configparser.ConfigParser()
@@ -11,9 +14,14 @@ config.read('dl.cfg')
 
 os.environ['AWS_ACCESS_KEY_ID']=config['KEYS']['AWS_ACCESS_KEY_ID']
 os.environ['AWS_SECRET_ACCESS_KEY']=config['KEYS']['AWS_SECRET_ACCESS_KEY']
+os.environ['jdk.xml.entityExpansionLimit']='0';
+
+
 
 
 def create_spark_session():
+
+    findspark.init()
     spark = SparkSession \
         .builder \
        .config("spark.jars.packages", "org.apache.hadoop:hadoop-aws:2.7.0") \
@@ -34,7 +42,7 @@ def process_song_data(spark, input_data, output_data):
     songs_table = df.select('song_id','title','artist_id','year','duration')
 
     # write songs table to parquet files partitioned by year and artist
-    songs_table.write.partitionBy("year","artist_id").parquet(output_data)
+    songs_table.write.mode('append').partitionBy("year","artist_id").parquet(output_data)
 
     # extract columns to create artists table
     artists_table =  df.selectExpr('artist_id','artist_name as name' ,\
@@ -42,7 +50,7 @@ def process_song_data(spark, input_data, output_data):
                                   'artist_longitude as longitude ')
 
     # write artists table to parquet files
-    artists_table.write.parquet(output_data)
+    artists_table.write.mode('append').parquet(output_data)
 
 
 def process_log_data(spark, input_data, output_data):
@@ -59,7 +67,8 @@ def process_log_data(spark, input_data, output_data):
     users_table=df.selectExpr('userId as user_id','firstName as first_name','lastName as last_name','gender','level')
 
     # write users table to parquet files
-    users_table.write.parquet(output_data)
+    users_table.write.mode('append').parquet(output_data)
+
 
     # create timestamp column from original timestamp column
     def format_datetime(ts):
@@ -79,7 +88,7 @@ def process_log_data(spark, input_data, output_data):
                                          'weekday(date) as weekday')
 
     # write time table to parquet files partitioned by year and month
-    time_table.write.partitionBy("year","month")\
+    time_table.write.mode('append').partitionBy("year","month")\
         .parquet(output_data)
 
     # read in song data to use for songplays table
@@ -108,7 +117,7 @@ def process_log_data(spark, input_data, output_data):
 """)
 
     # write songplays table to parquet files partitioned by year and month
-    songplays_table.write.partitionBy("year","month").parquet(output_data)
+    songplays_table.write.mode('append').partitionBy("year","month").parquet(output_data)
 
 
 def main():
