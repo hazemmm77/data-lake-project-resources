@@ -5,6 +5,9 @@ from pyspark.sql import SparkSession
 from pyspark.sql.functions import udf, col
 from pyspark.sql.functions import year, month, dayofmonth, hour, weekofyear, date_format
 import findspark
+from pyspark.sql.types import TimestampType,DateType
+from pyspark.sql.functions import udf
+from datetime import datetime
 
 
 
@@ -39,23 +42,26 @@ def process_song_data(spark, input_data, output_data):
     df = spark.read.json(song_data)
 
     # extract columns to create songs table
-    songs_table = df.select('song_id','title','artist_id','year','duration')
+    songs_table=df.select('song_id','title','artist_id','year',\
+    'duration')
 
+    songs_table = songs_table.drop_duplicates(subset=['song_id'])
     # write songs table to parquet files partitioned by year and artist
-    songs_table.write.mode('append').partitionBy("year","artist_id").parquet(output_data)
+    songs_table.write.mode('append').partitionBy("year","artist_id").parquet(output_data+"/songs_table")
 
     # extract columns to create artists table
     artists_table =  df.selectExpr('artist_id','artist_name as name' ,\
                                   'artist_location as location' ,'artist_latitude as latitude ',\
                                   'artist_longitude as longitude ')
+    artists_table=artists_table.drop_duplicates(subset=['artist_id'])
 
     # write artists table to parquet files
-    artists_table.write.mode('append').parquet(output_data)
+    artists_table.write.mode('append').parquet(output_data+"/artists_table")
 
 
 def process_log_data(spark, input_data, output_data):
     # get filepath to log data file
-    log_data = os.path.join(input_data,'log-data/*/*/*.json')
+    log_data = os.path.join(input_data,'song_data/A/A/A/*.json')
 
     # read log data file
     df = spark.read.json(log_data)
@@ -65,9 +71,10 @@ def process_log_data(spark, input_data, output_data):
 
     # extract columns for users table
     users_table=df.selectExpr('userId as user_id','firstName as first_name','lastName as last_name','gender','level')
+    users_table = users_table.drop_duplicates(subset=['userId'])
 
     # write users table to parquet files
-    users_table.write.mode('append').parquet(output_data)
+    users_table.write.mode('append').parquet(output_data+"/users_table.parquet")
 
 
     # create timestamp column from original timestamp column
@@ -86,13 +93,13 @@ def process_log_data(spark, input_data, output_data):
                                          'day(date) as day','weekofyear(date) as week',\
                                          'month(date) as month','year(date) as year',\
                                          'weekday(date) as weekday')
-
+    time_table = time_table.drop_duplicates(subset=['start_time'])
     # write time table to parquet files partitioned by year and month
     time_table.write.mode('append').partitionBy("year","month")\
-        .parquet(output_data)
+        .parquet(output_data+"/time_table.parquet")
 
     # read in song data to use for songplays table
-    song_data = os.path.join(input_data, 'song_data/*/*/*/*.json')
+    song_data = os.path.join(input_data, 'song_data/A/A/A/*.json')
     song_df =spark.read.json(song_data)
 
     # extract columns from joined song and log datasets to create songplays table
@@ -115,16 +122,17 @@ def process_log_data(spark, input_data, output_data):
                             on lo.start_time =t.start_time
                             WHERE lo.userId is NOT NULL
 """)
+    songplays_table=songplays_table.drop_duplicates(subset=['start_time'])
 
     # write songplays table to parquet files partitioned by year and month
-    songplays_table.write.mode('append').partitionBy("year","month").parquet(output_data)
+    songplays_table.write.mode('append').partitionBy("year","month").parquet(output_data+"/songplays_table.parquet")
 
 
 def main():
     spark = create_spark_session()
     input_data = "s3a://udacity-dend/"
 
-    output_data = "s3a://test1977777/tables/"
+    output_data = "s3a://redchift-cluster-bucket-1977/"
 
     process_song_data(spark, input_data, output_data)
     process_log_data(spark, input_data, output_data)
